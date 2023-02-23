@@ -1,38 +1,157 @@
-# Import necessary modules
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.model_selection import train_test_split
-from sklearn.datasets import load_iris
 import numpy as np
+import pandas as pd
+from sklearn import metrics
+from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
-
-irisData = load_iris()
-
-# Create feature and target arrays
-X = irisData.data
-y = irisData.target
-
-# Split into training and test set
-X_train, X_test, y_train, y_test = train_test_split(
-			X, y, test_size = 0.2, random_state=42)
-
-neighbors = np.arange(1, 9)
-train_accuracy = np.empty(len(neighbors))
-test_accuracy = np.empty(len(neighbors))
-
-# Loop over K values
-for i, k in enumerate(neighbors):
-	knn = KNeighborsClassifier(n_neighbors=k)
-	knn.fit(X_train, y_train)
-	
-	# Compute training and test data accuracy
-	train_accuracy[i] = knn.score(X_train, y_train)
-	test_accuracy[i] = knn.score(X_test, y_test)
-
-# Generate plot
-plt.plot(neighbors, test_accuracy, label = 'Testing dataset Accuracy')
-plt.plot(neighbors, train_accuracy, label = 'Training dataset Accuracy')
-
-plt.legend()
-plt.xlabel('n_neighbors')
-plt.ylabel('Accuracy')
+import seaborn as sns
+import pickle
+data = pd.read_csv('data.csv')
+data.head()
+data.shape
+X = data.iloc[:,:-1]
+X.head()
+y = data.iloc[:,-1]
+y.head()
+data['target'].value_counts()
+X_train,X_test,y_train,y_test = train_test_split(X,y,test_size=0.5,random_state=2)
+sns.countplot(x='target',data=data)
 plt.show()
+X_train.shape
+X_train.head()
+y_test.shape
+y_test.head()
+from sklearn.metrics import accuracy_score
+max_accuracy = 0
+
+from sklearn.neighbors import KNeighborsClassifier
+
+
+        
+#print(max_accuracy)
+#print(best_x)
+
+model = KNeighborsClassifier(n_neighbors=1)
+model.fit(X_train,y_train)
+y_pred = model.predict(X_test)
+filename = 'knn.sav'
+pickle.dump(model, open(filename, 'wb'))
+acc=(metrics.accuracy_score(y_pred,y_test)*100)
+print("Accuracy is:",acc)
+cm1 = metrics.confusion_matrix(y_pred,y_test)
+
+total1=sum(sum(cm1))
+
+
+sensitivity1 = cm1[0,0]/(cm1[0,0]+cm1[0,1])
+print('Sensitivity : ', sensitivity1 )
+
+specificity1 = cm1[1,1]/(cm1[1,0]+cm1[1,1])
+print('Specificity : ', specificity1)
+
+import seaborn as sns
+from sklearn.metrics import confusion_matrix
+from sklearn.metrics import classification_report
+
+print('\nClassification Report\n')
+print(classification_report(y_pred,y_test, target_names=['Class 1', 'Class 2']))
+
+
+
+
+confusion_mtx = confusion_matrix(y_pred,y_test) 
+# plot the confusion matrix
+f,ax = plt.subplots(figsize=(8, 8))
+sns.heatmap(confusion_mtx, annot=True, linewidths=0.01,cmap="Blues",linecolor="gray", fmt= '.1f',ax=ax)
+plt.xlabel("Predicted Label")
+plt.ylabel("True Label")
+plt.title("Confusion Matrix")
+plt.show()
+import urllib.request
+import http
+from time import sleep
+base = "http://192.168.174.10/"
+import pickle
+
+from time import sleep
+import numpy as np
+import pandas as pd
+from sklearn.model_selection import train_test_split
+import matplotlib.pyplot as plt
+import seaborn as sns
+import pickle
+filename = 'knn.sav'
+loaded_model = pickle.load(open(filename, 'rb')) 
+def transfer(my_url):   #use to send and receive data
+    try:
+        n = urllib.request.urlopen(base + my_url).read()
+        n = n.decode("utf-8")
+        return n
+
+    except http.client.HTTPException as e:
+        return e
+
+g=0
+f=0
+field1=""
+field2=""
+field3=""
+field4=""
+#you can send pwm255 and then decode it to get pwm or more varibales
+while True:
+    try:
+        w=0
+        x=0
+        y=0.0
+        z=0
+        vi=0
+        vib=""
+        gas=""
+        temp=""
+        current=""
+        two = transfer(str(g))
+        g=1
+        print(two)
+        for i in str(two):
+            if i in ":" or i in ',':
+                vi=vi+1
+            elif vi==1:
+                vib=vib+i
+            elif vi==3:
+                gas=gas+i
+            elif vi==5:
+                temp=temp+i
+            elif vi==7:
+                current=current+i
+        vi=0
+        #print(vib)
+        #print(gas)
+        #print(temp)
+        #print(current)
+        if "ABNORMAL" in vib:
+            w=1
+        else:
+            w=0
+        if "NO_LEAKAGE" in gas:
+            x=0
+        else:
+            x=1
+        y=float(temp)
+        if "ABNORMAL" in current:
+            z=1
+        else:
+            z=0
+        #print(w)
+        #print(x)
+        #print👍
+        #print(z)
+        person_reports=[[w,x,y,z]]
+        predicted = loaded_model.predict(person_reports)
+        print(int(predicted))
+        if int(predicted)==0:
+            ur= "https://api.thingspeak.com/update?api_key=8JU3M80YH7V1UITT&field1="+str(vib)+"&field2="+str(gas)+"&field3="+str(temp)+"&field4="+str(current)+"&field5="+str("NORMAL")
+            urllib.request.urlopen(ur)
+        if int(predicted)==1:
+            ur= "https://api.thingspeak.com/update?api_key=8JU3M80YH7V1UITT&field1="+str(vib)+"&field2="+str(gas)+"&field3="+str(temp)+"&field4="+str(current)+"&field5="+str("ABNORMAL")
+            urllib.request.urlopen(ur)
+    except:
+        pass
